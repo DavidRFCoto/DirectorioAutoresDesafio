@@ -6,13 +6,13 @@
     descripcionGenero TEXT                         
 );
 CREATE TABLE IF NOT EXISTS author (
-    autId INT AUTO_INCREMENT PRIMARY KEY,          -- ID único para cada autor
+    autId INT AUTO_INCREMENT PRIMARY KEY,          -- ID unico para cada autor
     nombreAutor VARCHAR(100) NOT NULL,             -- Nombre del autor
     apellidoAutor VARCHAR(100) NOT NULL,           -- Apellido del autor
     email VARCHAR(100),                            -- Email del autor
     fechaNacimiento DATE,                          -- Fecha de nacimiento del autor
-    telefono VARCHAR(15),                          -- Teléfono del autor
-    generoId INT,                                  -- Llave foránea para el género literario
+    telefono VARCHAR(15),                          -- Telefono del autor
+    generoId INT,                                  -- Llave foranea para el genero literario
     
     UNIQUE (nombreAutor, apellidoAutor),
     
@@ -26,4 +26,5 @@ INSERT INTO literarygenre (nombreGenero, descripcionGenero) VALUES
  ('Thriller Psicológico', 'Relatos de suspenso centrados en la mente de los personajes.');
 SELECT * FROM literarygenre;
 DESCRIBE author;
+
 select *from author;
