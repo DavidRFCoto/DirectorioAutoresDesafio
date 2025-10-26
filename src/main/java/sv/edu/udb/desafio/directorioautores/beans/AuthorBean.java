@@ -40,15 +40,16 @@ public class AuthorBean implements Serializable {
 
     private List<Author> filteredAuthors;
     private Integer selectedGenreFilterId;
+    private String searchText; // Filtro de busqueda por texto
 
     @PostConstruct
     public void init() {
         loadAuthors();
     }
 
-    /**
-     * Carga todos los autores desde la base de datos
-     */
+
+    /** Carga todos los autores desde la base de datos **/
+
     private void loadAuthors() {
         authors = authorModel.getAllAuthors();
         filteredAuthors = authors;
@@ -67,7 +68,7 @@ public class AuthorBean implements Serializable {
             return;
         }
 
-        // Asignar el género literario seleccionado
+        // Asignar el genero literario seleccionado
         Integer selectedGenreId = literaryGenreBean.getSelectedGenreId();
         if (selectedGenreId != null) {
             LiteraryGenre selectedGenre = genreModel.findGenreById(selectedGenreId);
@@ -75,7 +76,7 @@ public class AuthorBean implements Serializable {
         }
 
         try {
-            // Verificar si el autor ya existe (mismo nombre y apellido)
+            // Verificar si el autor ya existe mismo nombre y apellido
             boolean authorExists = checkIfAuthorExists(author);
 
             if (author.getId() == null) {
@@ -102,7 +103,7 @@ public class AuthorBean implements Serializable {
         // Limpiar formulario y recargar datos
         resetForm();
         loadAuthors();
-        applyGenreFilter();
+        applyFilters(); // Aplicar filtros despues de agregar/actualizar
     }
 
     /**
@@ -112,7 +113,7 @@ public class AuthorBean implements Serializable {
         if (authors == null) return false;
 
         return authors.stream()
-                .filter(a -> !a.getId().equals(newAuthor.getId())) // Excluir el mismo autor si está editando
+                .filter(a -> !a.getId().equals(newAuthor.getId())) // Excluir el mismo autor si esta editando
                 .anyMatch(a ->
                         a.getFirstName().equalsIgnoreCase(newAuthor.getFirstName()) &&
                                 a.getLastName().equalsIgnoreCase(newAuthor.getLastName())
@@ -166,7 +167,7 @@ public class AuthorBean implements Serializable {
 
         this.author = authorToEdit;
 
-        // Seleccionar el género en el dropdown
+        // Seleccionar el genero en el dropdown
         if (authorToEdit.getLiteraryGenre() != null) {
             literaryGenreBean.setSelectedGenreId(authorToEdit.getLiteraryGenre().getId());
         } else {
@@ -193,23 +194,55 @@ public class AuthorBean implements Serializable {
     }
 
     /**
-     * Aplica el filtro por género literario (operación AJAX)
+     * Aplica el filtro por genero literario operacion AJAX
      */
     public void applyGenreFilter() {
-        if (selectedGenreFilterId == null) {
-            // Mostrar todos los autores
-            filteredAuthors = authors;
-        } else {
-            // Filtrar por género seleccionado
-            filteredAuthors = authors.stream()
+        applyFilters();
+    }
+
+    /**
+     * Aplica el filtro de busqueda por texto operacion AJAX sincrona
+     */
+    public void applySearchFilter() {
+        applyFilters();
+    }
+
+    /**
+     * Aplica ambos filtros: genero y busqueda de texto
+     */
+    private void applyFilters() {
+        if (authors == null) {
+            filteredAuthors = null;
+            return;
+        }
+
+        // Comenzar con todos los autores
+        filteredAuthors = authors;
+
+        // Aplicar filtro por genero
+        if (selectedGenreFilterId != null) {
+            filteredAuthors = filteredAuthors.stream()
                     .filter(a -> a.getLiteraryGenre() != null &&
                             a.getLiteraryGenre().getId().equals(selectedGenreFilterId))
+                    .collect(Collectors.toList());
+        }
+
+        // Aplicar filtro de busqueda por texto
+        if (searchText != null && !searchText.trim().isEmpty()) {
+            String searchLower = searchText.toLowerCase().trim();
+            filteredAuthors = filteredAuthors.stream()
+                    .filter(a -> {
+                        String fullName = (a.getFirstName() + " " + a.getLastName()).toLowerCase();
+                        return fullName.contains(searchLower) ||
+                                (a.getFirstName() != null && a.getFirstName().toLowerCase().contains(searchLower)) ||
+                                (a.getLastName() != null && a.getLastName().toLowerCase().contains(searchLower));
+                    })
                     .collect(Collectors.toList());
         }
     }
 
     /**
-     * Limpia el formulario después de agregar/actualizar
+     * Limpia el formulario despues de agregar/actualizar
      */
     private void resetForm() {
         author = new Author();
@@ -272,5 +305,13 @@ public class AuthorBean implements Serializable {
 
     public void setSelectedGenreFilterId(Integer selectedGenreFilterId) {
         this.selectedGenreFilterId = selectedGenreFilterId;
+    }
+
+    public String getSearchText() {
+        return searchText;
+    }
+
+    public void setSearchText(String searchText) {
+        this.searchText = searchText;
     }
 }

@@ -10,17 +10,17 @@ import jakarta.inject.Named;
 import java.io.Serializable;
 import java.util.List;
 
-@Named // Permite que JSF pueda encontrar este bean con el nombre "literaryGenreBean"
-@ViewScoped // El bean vivirá mientras estés en la misma página.
+@Named //Para permitir que JSF encuentre  el bean con el nombre "literaryGenreBean"
+@ViewScoped // El bean vivira mientras estes en la misma pagina.
 public class LiteraryGenreBean implements Serializable {
 
-    @Inject // Inyección de dependencias: El servidor nos da una instancia de LiteraryGenreModel
+    @Inject // Inyeccion de dependencias: El servidor nos da una instancia de LiteraryGenreModel
     private LiteraryGenreModel genreModel;
 
     private List<LiteraryGenre> genres;
     private Integer selectedGenreId;
 
-    @PostConstruct // Este método se ejecuta automáticamente después de que el bean es creado
+    @PostConstruct // Este metodo se ejecuta automaticamente despues que el bean se a creado
     public void init() {
         loadGenres();
     }

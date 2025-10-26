@@ -19,7 +19,7 @@ public class LiteraryGenreModel {
         try {
             return em.createQuery("SELECT g FROM LiteraryGenre g", LiteraryGenre.class).getResultList();
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error al obtener todos los géneros", e);
+            LOGGER.log(Level.SEVERE, "Error al obtener todos los generos", e);
             return null;
         }
     }
@@ -28,7 +28,7 @@ public class LiteraryGenreModel {
         try {
             return em.find(LiteraryGenre.class, id);
         } catch (Exception e) {
-            LOGGER.log(Level.SEVERE, "Error al buscar género por ID", e);
+            LOGGER.log(Level.SEVERE, "Error al buscar genero por ID", e);
             return null;
         }
     }
