@@ -8,22 +8,30 @@ import jakarta.faces.validator.Validator;
 import jakarta.faces.validator.ValidatorException;
 import java.util.regex.Pattern;
 
-@FacesValidator("svPhoneValidator") // ID para usarlo en la vista
-public class SVPhoneValidator implements Validator {
+/**
+ * Validador para números telefónicos de El Salvador
+ * Formato: ####-#### donde el primer dígito debe ser 2, 3, 6 o 7
+ * Ejemplo: 2234-5678, 7890-1234
+ */
+@FacesValidator("svPhoneValidator")
+public class SVPhoneValidator implements Validator<String> {
 
-    // Expresión regular para el formato ####-#### que empieza con 2, 6 o 7.
-    private static final Pattern PHONE_PATTERN = Pattern.compile("^[267]\\d{3}-\\d{4}$");
+    // Expresión regular para el formato ####-#### que empieza con 2, 3, 6 o 7
+    private static final Pattern PHONE_PATTERN = Pattern.compile("^[2367]\\d{3}-\\d{4}$");
 
     @Override
-    public void validate(FacesContext context, UIComponent component, Object value) throws ValidatorException {
-        if (value == null || value.toString().isEmpty()) {
-            return; // No validar si está vacío, para eso se usa required="true"
+    public void validate(FacesContext context, UIComponent component, String value) throws ValidatorException {
+        // Si el campo está vacío, no validar (required se encarga de eso)
+        if (value == null || value.trim().isEmpty()) {
+            return;
         }
 
-        String phone = value.toString();
-        if (!PHONE_PATTERN.matcher(phone).matches()) {
-            FacesMessage msg = new FacesMessage("Error de validación de teléfono",
-                    "El formato debe ser ####-#### y empezar con 2, 6 o 7.");
+        // Validar el formato del teléfono
+        if (!PHONE_PATTERN.matcher(value).matches()) {
+            FacesMessage msg = new FacesMessage(
+                    "Error de validación de teléfono",
+                    "El formato debe ser ####-#### y empezar con 2, 3, 6 o 7. Ejemplo: 2234-5678"
+            );
             msg.setSeverity(FacesMessage.SEVERITY_ERROR);
             throw new ValidatorException(msg);
         }

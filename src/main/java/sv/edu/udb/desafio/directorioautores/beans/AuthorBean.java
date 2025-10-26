@@ -1,4 +1,3 @@
-
 package sv.edu.udb.desafio.directorioautores.beans;
 
 import sv.edu.udb.desafio.directorioautores.entities.Author;
@@ -19,6 +18,9 @@ import java.time.ZoneId;
 import java.util.List;
 import java.util.stream.Collectors;
 
+/**
+ * Managed Bean para gestionar las operaciones CRUD de autores
+ */
 @Named("authorBean")
 @ViewScoped
 public class AuthorBean implements Serializable {
@@ -44,16 +46,28 @@ public class AuthorBean implements Serializable {
         loadAuthors();
     }
 
+    /**
+     * Carga todos los autores desde la base de datos
+     */
     private void loadAuthors() {
         authors = authorModel.getAllAuthors();
         filteredAuthors = authors;
     }
 
+    /**
+     * Agrega o actualiza un autor
+     * Valida si el autor ya existe (mismo nombre y apellido) pero permite agregarlo
+     */
     public void addAuthor() {
+        // Limpiar mensajes previos
+        message = null;
+
+        // Validar datos del formulario
         if (!validateAuthor()) {
             return;
         }
 
+        // Asignar el género literario seleccionado
         Integer selectedGenreId = literaryGenreBean.getSelectedGenreId();
         if (selectedGenreId != null) {
             LiteraryGenre selectedGenre = genreModel.findGenreById(selectedGenreId);
@@ -61,82 +75,132 @@ public class AuthorBean implements Serializable {
         }
 
         try {
+            // Verificar si el autor ya existe (mismo nombre y apellido)
+            boolean authorExists = checkIfAuthorExists(author);
+
             if (author.getId() == null) {
+                // Crear nuevo autor
                 authorModel.createAuthor(author);
-                message = "Autor agregado correctamente.";
+
+                if (authorExists) {
+                    message = "ADVERTENCIA: Autor con el mismo nombre y apellido ya existe. Se agregó de todas formas.";
+                    addWarningMessage(message);
+                } else {
+                    message = "Autor agregado correctamente.";
+                }
             } else {
+                // Actualizar autor existente
                 authorModel.updateAuthor(author);
                 message = "Autor actualizado correctamente.";
             }
         } catch (Exception e) {
-            message = "Error: El autor ya existe (mismo nombre y apellido).";
-            FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, message, null));
+            message = "Error al guardar el autor: " + e.getMessage();
+            addErrorMessage(message);
             return;
         }
 
-        author = new Author();
-        literaryGenreBean.setSelectedGenreId(null);
+        // Limpiar formulario y recargar datos
+        resetForm();
         loadAuthors();
-
-        // Mantener el filtro aplicado después de agregar/editar
         applyGenreFilter();
     }
 
+    /**
+     * Verifica si ya existe un autor con el mismo nombre y apellido
+     */
+    private boolean checkIfAuthorExists(Author newAuthor) {
+        if (authors == null) return false;
+
+        return authors.stream()
+                .filter(a -> !a.getId().equals(newAuthor.getId())) // Excluir el mismo autor si está editando
+                .anyMatch(a ->
+                        a.getFirstName().equalsIgnoreCase(newAuthor.getFirstName()) &&
+                                a.getLastName().equalsIgnoreCase(newAuthor.getLastName())
+                );
+    }
+
+    /**
+     * Valida los datos del autor antes de guardar
+     */
     private boolean validateAuthor() {
         boolean isValid = true;
+
+        // Validar nombre
         if (author.getFirstName() == null || author.getFirstName().trim().isEmpty()) {
             addErrorMessage("El campo Nombre es obligatorio.");
             isValid = false;
         }
+
+        // Validar apellido
         if (author.getLastName() == null || author.getLastName().trim().isEmpty()) {
             addErrorMessage("El campo Apellido es obligatorio.");
             isValid = false;
         }
+
+        // Validar fecha de nacimiento
         if (author.getBirthDate() != null) {
-            LocalDate birthDate = author.getBirthDate().toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
-            if (Period.between(birthDate, LocalDate.now()).getYears() < 18) {
-                addErrorMessage("El autor debe ser mayor de 18 años.");
+            LocalDate birthDate = author.getBirthDate().toInstant()
+                    .atZone(ZoneId.systemDefault()).toLocalDate();
+            int age = Period.between(birthDate, LocalDate.now()).getYears();
+
+            if (age < 18) {
+                addErrorMessage("El autor debe ser mayor de 18 años. Edad actual: " + age + " años.");
                 isValid = false;
             }
         } else {
             addErrorMessage("La fecha de nacimiento es obligatoria.");
             isValid = false;
         }
+
         return isValid;
     }
 
-    private void addErrorMessage(String summary) {
-        FacesContext.getCurrentInstance().addMessage(null, new FacesMessage(FacesMessage.SEVERITY_ERROR, summary, null));
-    }
-
+    /**
+     * Prepara el formulario para editar un autor existente
+     */
     public void editAuthor(Author authorToEdit) {
-        if(authorToEdit==null){
-            addErrorMessage("No se puede seleccionar el autor para seleccionar.");
+        if (authorToEdit == null) {
+            addErrorMessage("No se puede seleccionar el autor para editar.");
             return;
         }
+
         this.author = authorToEdit;
+
+        // Seleccionar el género en el dropdown
         if (authorToEdit.getLiteraryGenre() != null) {
             literaryGenreBean.setSelectedGenreId(authorToEdit.getLiteraryGenre().getId());
         } else {
             literaryGenreBean.setSelectedGenreId(null);
         }
+
+        message = "Editando autor: " + authorToEdit.getFirstName() + " " + authorToEdit.getLastName();
     }
 
+    /**
+     * Elimina un autor de la base de datos
+     */
     public void deleteAuthor(Author authorToDelete) {
         try {
             authorModel.deleteAuthor(authorToDelete);
-            message = "Autor eliminado correctamente.";
-        } catch(Exception e) {
-            message = "Error al eliminar el autor.";
+            message = "Autor eliminado correctamente: " + authorToDelete.getFirstName() + " " + authorToDelete.getLastName();
+        } catch (Exception e) {
+            message = "Error al eliminar el autor: " + e.getMessage();
+            addErrorMessage(message);
         }
+
         loadAuthors();
         applyGenreFilter();
     }
 
+    /**
+     * Aplica el filtro por género literario (operación AJAX)
+     */
     public void applyGenreFilter() {
         if (selectedGenreFilterId == null) {
+            // Mostrar todos los autores
             filteredAuthors = authors;
         } else {
+            // Filtrar por género seleccionado
             filteredAuthors = authors.stream()
                     .filter(a -> a.getLiteraryGenre() != null &&
                             a.getLiteraryGenre().getId().equals(selectedGenreFilterId))
@@ -144,16 +208,69 @@ public class AuthorBean implements Serializable {
         }
     }
 
-    // --- Getters y Setters ---
+    /**
+     * Limpia el formulario después de agregar/actualizar
+     */
+    private void resetForm() {
+        author = new Author();
+        literaryGenreBean.setSelectedGenreId(null);
+    }
 
-    public Author getAuthor() { return author; }
-    public void setAuthor(Author author) { this.author = author; }
-    public List<Author> getAuthors() { return authors; }
-    public void setAuthors(List<Author> authors) { this.authors = authors; }
-    public String getMessage() { return message; }
-    public void setMessage(String message) { this.message = message; }
-    public List<Author> getFilteredAuthors() { return filteredAuthors; }
-    public void setFilteredAuthors(List<Author> filteredAuthors) { this.filteredAuthors = filteredAuthors; }
-    public Integer getSelectedGenreFilterId() { return selectedGenreFilterId; }
-    public void setSelectedGenreFilterId(Integer selectedGenreFilterId) { this.selectedGenreFilterId = selectedGenreFilterId; }
+    /**
+     * Agrega un mensaje de error al contexto de JSF
+     */
+    private void addErrorMessage(String summary) {
+        FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(FacesMessage.SEVERITY_ERROR, summary, null));
+    }
+
+    /**
+     * Agrega un mensaje de advertencia al contexto de JSF
+     */
+    private void addWarningMessage(String summary) {
+        FacesContext.getCurrentInstance().addMessage(null,
+                new FacesMessage(FacesMessage.SEVERITY_WARN, summary, null));
+    }
+
+    // ==================== Getters y Setters ====================
+
+    public Author getAuthor() {
+        return author;
+    }
+
+    public void setAuthor(Author author) {
+        this.author = author;
+    }
+
+    public List<Author> getAuthors() {
+        return authors;
+    }
+
+    public void setAuthors(List<Author> authors) {
+        this.authors = authors;
+    }
+
+    public String getMessage() {
+        return message;
+    }
+
+    public void setMessage(String message) {
+        this.message = message;
+    }
+
+    public List<Author> getFilteredAuthors() {
+        return filteredAuthors;
+    }
+
+    public void setFilteredAuthors(List<Author> filteredAuthors) {
+        this.filteredAuthors = filteredAuthors;
+    }
+
+    public Integer getSelectedGenreFilterId() {
+        return selectedGenreFilterId;
+    }
+
+    public void setSelectedGenreFilterId(Integer selectedGenreFilterId) {
+        this.selectedGenreFilterId = selectedGenreFilterId;
+    }
 }
